@@ -1,0 +1,90 @@
+#include "DHT.h" //library sensor yang telah diimportkan
+#include <SPI.h>
+#include <Ethernet.h>
+ 
+#define DHTPIN 4     //Pin apa yang digunakan
+#define DHTTYPE DHT11   // DHT 11
+
+byte mac[] = { 0x28, 0xAA, 0xBB, 0xCC, 0xDA, 0x02 };
+EthernetClient client;
+ 
+DHT dht(DHTPIN, DHTTYPE);
+
+EthernetClient client;
+char server[] = "192.168.197.208"; // ip penangkap
+ 
+void setup() {
+  Serial.begin(9600); //baud komunikasi serial
+  dht.begin(); //prosedur memulai pembacaan module sensor
+  Serial.println("Initialize Ethernet with DHCP:");
+  if (Ethernet.begin(mac) == 0) {
+    return;
+    if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+      return;
+    } else if (Ethernet.linkStatus() == LinkOFF) {
+      return;
+    }
+    while (true) {
+      delay(1);
+    }
+  }
+}
+ 
+void loop() {
+  delay(14900);  //menunggu 14.9 detik
+ 
+  //pembacaan sensor membutuhkan waktu 250ms
+ 
+  //Pembacaan untuk data kelembaban
+  float humidity_1 = dht.readHumidity();
+  //Pembacaan dalam format celcius (c)
+  float celcius_1 = dht.readTemperature();
+  //pembacaan dalam format Fahrenheit
+  //float fahrenheit_1 = dht.readTemperature(true);
+ 
+  //mengecek pembacaan apakah terjadi kegagalan atau tidak
+  if (isnan(humidity_1) || isnan(celcius_1)) {
+    Serial.println("Pembacaan data dari module sensor gagal!");
+    return;
+  }
+ 
+//  float htof = dht.computeHeatIndex(fahrenheit_1, humidity_1); 
+  //Prosedur pembacaaan data indeks panas dalam bentuk fahreheit
+//  float htoc = dht.computeHeatIndex(celcius_1, humidity_1, false);
+ //Prosedur pembacaaan data indeks panas dalam bentuk celcius
+ 
+  Serial.println("connecting...");
+
+  String temp = "suhu=";
+  temp += celcius_1;
+  temp += "&kelembapan=";
+  temp += humidity_1;
+  temp += "&agent=ardu-tik-jeff";
+
+
+
+  if (client.connect("127.0.0.1",80)) {                                 
+    Serial.println("Sending to Server: ");                   
+    client.println("POST /monitoring_suhu_arduino/script_php/poll.php HTTP/1.1");           
+    Serial.println("POST /monitoring_suhu_arduino/script_php/poll.php HTTP/1.1");           
+    client.println("Host: 127.0.0.1");
+    client.println("Content-Type: application/x-www-form-urlencoded");
+    client.println("Connection: close");
+    client.println("User-Agent: Arduino/1.0");
+    client.print("Content-Length: ");
+    client.println(temp.length());
+    client.println();
+    client.print(temp);
+    client.println();      
+    Serial.println("We have connection");                                     
+  } else {
+    Serial.println("Cannot connect to Server");               
+  }
+
+  if(client.connected()) {    
+    Serial.println("We have abc");
+    client.stop();
+  }
+  
+ 
+}
